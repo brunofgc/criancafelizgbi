@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitor de QR Code</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <style>
+        /* Estilos para tornar o layout responsivo */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2em;
+            margin: 20px 0;
+        }
+
+        #form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px 0;
+            display: none; /* Oculto até clicar em "Processar" */
+        }
+
+        #result {
+            font-size: 1.2em;
+            text-align: center;
+            margin-top: 20px;
+            word-wrap: break-word; /* Ajusta o texto para caber na tela */
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        /* Ajustes de responsividade */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            button {
+                width: 80%;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Sopão Solidário, validador de bilhete.</h1>
+    <div id="form-container">
+        <button onclick="processTicket()">Processar</button>
+    </div>
+    <div id="reader"></div>
+    <p id="result"></p>
+
+    <script>
+        let html5QrcodeScanner;
+
+        function processTicket() {
+            document.getElementById("reader").style.display = "block"; // Mostra o scanner
+
+            // Configura o scanner para a câmera traseira
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: { exact: "environment" } }, // Tenta selecionar a câmera traseira
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                onScanFailure
+            );
+        }
+
+        function onScanSuccess(decodedText) {
+            // Separa o texto decodificado por vírgulas
+            let partes = decodedText.split(",");
+            
+            // Gera o hash com base na segunda parte da string (código do bilhete)
+            const ticketHash = CryptoJS.MD5("AlineLimaSS" + partes[1]).toString();
+
+            // Exibe o resultado do QR code e o hash para comparação
+            document.getElementById("result").innerHTML = `
+                Hash do Bilhete: ${ticketHash}<br>
+                QR Code lido: ${partes[0]}`;
+
+            // Verifica se o hash gerado corresponde ao QR code lido
+            if (ticketHash === partes[0]) {
+                alert("Validado para o ticket " + partes[1]);
+            } else {
+                alert("Inválido");
+            }
+            
+            // Para o scanner após a validação
+            html5QrcodeScanner.stop().then(() => {
+                document.getElementById("reader").style.display = "none";
+            }).catch(err => {
+                console.warn("Erro ao parar o scanner: ", err);
+            });
+        }
+
+        function onScanFailure(error) {
+            // Exibe o erro no console, mas não interrompe o scanner
+            console.warn(`Erro de leitura: ${error}`);
+        }
+    </script>
+</body>
+</html>
